@@ -191,24 +191,6 @@ main {
 }
 
 @media (max-width: 900px) {
-  .menu-toggle {
-    display: inline-block;
-  }
-
-  .event-controls,
-  .form-section {
-    display: none;
-  }
-
-  body.menu-open .event-controls {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  body.menu-open .form-section {
-    display: block;
-  }
-
   main {
     grid-template-columns: 1fr;
     padding: 1rem;
@@ -217,4 +199,22 @@ main {
   .timetable-section {
     order: 2;
   }
+}
+
+body.compact-mode .menu-toggle {
+  display: inline-block;
+}
+
+body.compact-mode .event-controls,
+body.compact-mode .form-section {
+  display: none;
+}
+
+body.compact-mode.menu-open .event-controls {
+  display: grid;
+  gap: 0.75rem;
+}
+
+body.compact-mode.menu-open .form-section {
+  display: block;
 }

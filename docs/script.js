@@ -91,18 +91,17 @@ function initResponsiveMenu() {
     setMenuOpen(!document.body.classList.contains("menu-open"));
   });
 
-  const mediaQuery = window.matchMedia("(max-width: 900px)");
-  const syncByViewport = () => {
-    if (!mediaQuery.matches) {
+  const syncLayoutMode = () => {
+    const compactMode = window.innerWidth <= 1100 || !isWindowMaximized();
+    document.body.classList.toggle("compact-mode", compactMode);
+    if (!compactMode) {
       setMenuOpen(false);
     }
   };
 
-  if (typeof mediaQuery.addEventListener === "function") {
-    mediaQuery.addEventListener("change", syncByViewport);
-  } else {
-    mediaQuery.addListener(syncByViewport);
-  }
+  syncLayoutMode();
+  window.addEventListener("resize", syncLayoutMode);
+  window.addEventListener("orientationchange", syncLayoutMode);
 }
 
 function setMenuOpen(isOpen) {
@@ -110,6 +109,12 @@ function setMenuOpen(isOpen) {
   if (menuToggleBtn) {
     menuToggleBtn.setAttribute("aria-expanded", String(isOpen));
   }
+}
+
+function isWindowMaximized() {
+  const widthGap = Math.abs(window.outerWidth - window.screen.availWidth);
+  const heightGap = Math.abs(window.outerHeight - window.screen.availHeight);
+  return widthGap <= 24 && heightGap <= 24;
 }
 
 function renderEventOptions() {
