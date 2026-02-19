@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ライブタイムテーブル管理</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>ライブタイムテーブル管理</h1>
+      <div class="event-controls">
+        <div>
+          <label for="event-select">ライブを選択:</label>
+          <select id="event-select"></select>
+        </div>
+        <button id="new-event-btn" type="button">新しいライブを作成</button>
+        <div>
+          <label for="event-start">開始時刻:</label>
+          <input id="event-start" type="time" />
+          <button id="event-start-apply" type="button">開始時刻を設定</button>
+        </div>
+        <div>
+          <button id="download-csv-btn" type="button">CSVでダウンロード</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="form-section">
+        <h2>演目を追加</h2>
+        <form id="add-slot-form">
+          <label for="band-name">バンド名</label>
+          <input id="band-name" type="text" required />
+
+          <label for="performance-duration">演奏時間 (分)</label>
+          <input
+            id="performance-duration"
+            type="number"
+            min="1"
+            step="1"
+            required
+          />
+
+          <label for="changeover-duration">転換時間 (分)</label>
+          <input
+            id="changeover-duration"
+            type="number"
+            min="0"
+            step="1"
+            value="10"
+            required
+          />
+
+          <button type="submit">演目を追加</button>
+        </form>
+      </section>
+
+      <section class="timetable-section">
+        <h2>タイムテーブル</h2>
+        <p class="drag-hint">ドラッグ & ドロップで順番を並び替えできます</p>
+        <ul id="timetable-list"></ul>
+      </section>
+    </main>
+
+    <template id="timetable-item-template">
+      <li class="timetable-item" draggable="true">
+        <div class="item-handle" title="ドラッグして移動">&#x2630;</div>
+        <div class="item-content">
+          <h3 class="band-name"></h3>
+          <div class="time-range"></div>
+          <div class="meta"></div>
+        </div>
+        <div class="item-actions">
+          <button class="edit-btn" type="button">編集</button>
+          <button class="delete-btn" type="button">削除</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="./script.js" defer></script>
+  </body>
+</html>
