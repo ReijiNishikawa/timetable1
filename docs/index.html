@@ -8,8 +8,21 @@
   </head>
   <body>
     <header>
-      <h1>ライブタイムテーブル管理</h1>
-      <div class="event-controls">
+      <div class="header-bar">
+        <h1>ライブタイムテーブル管理</h1>
+        <button
+          id="menu-toggle"
+          class="menu-toggle"
+          type="button"
+          aria-label="メニューを開閉"
+          aria-expanded="false"
+          aria-controls="event-controls-panel add-slot-section"
+        >
+          ☰ メニュー
+        </button>
+      </div>
+
+      <div id="event-controls-panel" class="event-controls">
         <div>
           <label for="event-select">ライブを選択:</label>
           <select id="event-select"></select>
@@ -27,7 +40,7 @@
     </header>
 
     <main>
-      <section class="form-section">
+      <section id="add-slot-section" class="form-section">
         <h2>演目を追加</h2>
         <form id="add-slot-form">
           <label for="band-name">バンド名</label>

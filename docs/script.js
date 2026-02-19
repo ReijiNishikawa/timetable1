@@ -11,8 +11,10 @@ const performanceDurationInput = document.getElementById("performance-duration")
 const changeoverDurationInput = document.getElementById("changeover-duration");
 const timetableList = document.getElementById("timetable-list");
 const timetableItemTemplate = document.getElementById("timetable-item-template");
+const menuToggleBtn = document.getElementById("menu-toggle");
 
 const state = loadState() ?? createInitialState();
+initResponsiveMenu();
 saveState();
 renderEventOptions();
 renderTimetable();
@@ -81,6 +83,34 @@ downloadCsvBtn.addEventListener("click", () => {
 });
 
 let draggedSlotId = null;
+
+function initResponsiveMenu() {
+  if (!menuToggleBtn) return;
+
+  menuToggleBtn.addEventListener("click", () => {
+    setMenuOpen(!document.body.classList.contains("menu-open"));
+  });
+
+  const mediaQuery = window.matchMedia("(max-width: 900px)");
+  const syncByViewport = () => {
+    if (!mediaQuery.matches) {
+      setMenuOpen(false);
+    }
+  };
+
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", syncByViewport);
+  } else {
+    mediaQuery.addListener(syncByViewport);
+  }
+}
+
+function setMenuOpen(isOpen) {
+  document.body.classList.toggle("menu-open", isOpen);
+  if (menuToggleBtn) {
+    menuToggleBtn.setAttribute("aria-expanded", String(isOpen));
+  }
+}
 
 function renderEventOptions() {
   eventSelect.innerHTML = "";

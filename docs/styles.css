@@ -1,4 +1,4 @@
-*,
+﻿*,
 *::before,
 *::after {
   box-sizing: border-box;
@@ -17,9 +17,31 @@ header {
   color: #fff;
 }
 
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 h1 {
   margin: 0 0 1rem;
   font-size: 1.8rem;
+}
+
+.header-bar h1 {
+  margin: 0;
+}
+
+.menu-toggle {
+  display: none;
+  border: 1px solid #5c6770;
+  background: #111820;
+}
+
+.menu-toggle:hover,
+.menu-toggle:focus {
+  background: #0b1015;
 }
 
 .event-controls {
@@ -27,6 +49,7 @@ h1 {
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+  margin-top: 1rem;
 }
 
 label {
@@ -168,7 +191,30 @@ main {
 }
 
 @media (max-width: 900px) {
+  .menu-toggle {
+    display: inline-block;
+  }
+
+  .event-controls,
+  .form-section {
+    display: none;
+  }
+
+  body.menu-open .event-controls {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  body.menu-open .form-section {
+    display: block;
+  }
+
   main {
     grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .timetable-section {
+    order: 2;
   }
 }
