@@ -23,6 +23,13 @@
       </div>
 
       <div id="event-controls-panel" class="event-controls">
+        <div class="room-controls">
+          <label for="room-id">共有ルーム:</label>
+          <input id="room-id" type="text" placeholder="例: winter-live" />
+          <button id="room-apply-btn" type="button">ルーム接続</button>
+          <button id="copy-room-url-btn" type="button">招待URLコピー</button>
+          <span id="sync-status" class="sync-status">ローカル保存モード</span>
+        </div>
         <div>
           <label for="event-select">ライブを選択:</label>
           <select id="event-select"></select>
@@ -91,6 +98,9 @@
       </li>
     </template>
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="./firebase-config.js"></script>
     <script src="./script.js" defer></script>
   </body>
 </html>

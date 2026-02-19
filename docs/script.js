@@ -12,9 +12,29 @@ const changeoverDurationInput = document.getElementById("changeover-duration");
 const timetableList = document.getElementById("timetable-list");
 const timetableItemTemplate = document.getElementById("timetable-item-template");
 const menuToggleBtn = document.getElementById("menu-toggle");
+const roomIdInput = document.getElementById("room-id");
+const roomApplyBtn = document.getElementById("room-apply-btn");
+const copyRoomUrlBtn = document.getElementById("copy-room-url-btn");
+const syncStatus = document.getElementById("sync-status");
 
-const state = loadState() ?? createInitialState();
+let draggedSlotId = null;
+let state = createInitialState();
+
+const syncContext = {
+  enabled: false,
+  roomId: resolveRoomId(),
+  stateRef: null,
+};
+
 initResponsiveMenu();
+initRoomControls();
+
+state = loadState(syncContext.roomId) ?? createInitialState();
+const cloudReady = initCloudSync(syncContext.roomId);
+if (!cloudReady) {
+  setSyncStatus("ローカル保存モード");
+}
+
 saveState();
 renderEventOptions();
 renderTimetable();
@@ -22,11 +42,11 @@ renderTimetable();
 newEventBtn.addEventListener("click", () => {
   const name = window.prompt("ライブ名を入力してください", "未命名のライブ");
   if (!name) return;
+
   const event = createEvent(name.trim());
   state.events.push(event);
   state.activeEventId = event.id;
   saveState();
-  renderEventOptions();
   renderTimetable();
 });
 
@@ -82,8 +102,6 @@ downloadCsvBtn.addEventListener("click", () => {
   exportActiveEventAsCsv();
 });
 
-let draggedSlotId = null;
-
 function initResponsiveMenu() {
   if (!menuToggleBtn) return;
 
@@ -104,6 +122,75 @@ function initResponsiveMenu() {
   window.addEventListener("orientationchange", syncLayoutMode);
 }
 
+function initRoomControls() {
+  if (roomIdInput) {
+    roomIdInput.value = syncContext.roomId;
+  }
+
+  roomApplyBtn?.addEventListener("click", () => {
+    const nextRoom = sanitizeRoomId(roomIdInput?.value || "");
+    if (!nextRoom) {
+      window.alert("ルーム名は英数字・ハイフン・アンダースコアで入力してください。");
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.set("room", nextRoom);
+    window.location.search = params.toString();
+  });
+
+  copyRoomUrlBtn?.addEventListener("click", async () => {
+    const url = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(syncContext.roomId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSyncStatus("招待URLをコピーしました");
+    } catch {
+      window.prompt("このURLをコピーしてください", url);
+    }
+  });
+}
+
+function initCloudSync(roomId) {
+  const config = window.FIREBASE_CONFIG;
+  const validConfig = config && config.apiKey && !String(config.apiKey).startsWith("YOUR_");
+  const firebaseReady = typeof window.firebase !== "undefined";
+
+  if (!firebaseReady || !validConfig) {
+    return false;
+  }
+
+  try {
+    const app = window.firebase.apps.length
+      ? window.firebase.app()
+      : window.firebase.initializeApp(config);
+    const database = app.database();
+    const stateRef = database.ref(`rooms/${roomId}/state`);
+
+    syncContext.enabled = true;
+    syncContext.roomId = roomId;
+    syncContext.stateRef = stateRef;
+
+    stateRef.on("value", (snapshot) => {
+      const remote = snapshot.val();
+      if (!remote || !Array.isArray(remote.events)) {
+        saveState();
+        return;
+      }
+
+      state = normalizeState(remote);
+      renderEventOptions();
+      renderTimetable();
+      window.localStorage.setItem(getStorageKey(roomId), JSON.stringify(state));
+    });
+
+    setSyncStatus(`リアルタイム共有中: ${roomId}`);
+    return true;
+  } catch {
+    setSyncStatus("リアルタイム接続エラー");
+    return false;
+  }
+}
+
 function setMenuOpen(isOpen) {
   document.body.classList.toggle("menu-open", isOpen);
   if (menuToggleBtn) {
@@ -115,6 +202,28 @@ function isWindowMaximized() {
   const widthGap = Math.abs(window.outerWidth - window.screen.availWidth);
   const heightGap = Math.abs(window.outerHeight - window.screen.availHeight);
   return widthGap <= 24 && heightGap <= 24;
+}
+
+function setSyncStatus(message) {
+  if (syncStatus) {
+    syncStatus.textContent = message;
+  }
+}
+
+function resolveRoomId() {
+  const params = new URLSearchParams(window.location.search);
+  const room = sanitizeRoomId(params.get("room") || "");
+  return room || "default-room";
+}
+
+function sanitizeRoomId(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^[A-Za-z0-9_-]{1,40}$/.test(trimmed) ? trimmed : "";
+}
+
+function getStorageKey(roomId) {
+  return `${STORAGE_KEY}:${roomId}`;
 }
 
 function renderEventOptions() {
@@ -230,8 +339,8 @@ function renderTimetable() {
     (event) => {
       if (!draggedSlotId) return;
       event.preventDefault();
-      const activeEvent = getActiveEvent();
-      if (!activeEvent) return;
+      const currentEvent = getActiveEvent();
+      if (!currentEvent) return;
       const targetId = event.target.closest(".timetable-item")?.dataset.slotId;
       if (!targetId) {
         moveSlotToEnd(draggedSlotId);
@@ -244,6 +353,7 @@ function renderTimetable() {
 function reorderSlots(sourceId, targetId) {
   const activeEvent = getActiveEvent();
   if (!activeEvent) return;
+
   const sourceIndex = activeEvent.slots.findIndex((slot) => slot.id === sourceId);
   const targetIndex = activeEvent.slots.findIndex((slot) => slot.id === targetId);
   if (sourceIndex === -1 || targetIndex === -1) return;
@@ -257,8 +367,10 @@ function reorderSlots(sourceId, targetId) {
 function moveSlotToEnd(slotId) {
   const activeEvent = getActiveEvent();
   if (!activeEvent) return;
+
   const index = activeEvent.slots.findIndex((slot) => slot.id === slotId);
   if (index === -1) return;
+
   const [moved] = activeEvent.slots.splice(index, 1);
   activeEvent.slots.push(moved);
   saveState();
@@ -268,11 +380,13 @@ function moveSlotToEnd(slotId) {
 function editSlot(slotId) {
   const activeEvent = getActiveEvent();
   if (!activeEvent) return;
+
   const slot = activeEvent.slots.find((entry) => entry.id === slotId);
   if (!slot) return;
 
   const nameInput = window.prompt("バンド名を入力してください", slot.bandName);
   if (nameInput === null) return;
+
   const trimmedName = nameInput.trim();
   if (!trimmedName) {
     window.alert("バンド名は必須です。");
@@ -284,6 +398,7 @@ function editSlot(slotId) {
     String(slot.performanceMinutes)
   );
   if (performanceInput === null) return;
+
   const performanceMinutes = Number.parseInt(performanceInput, 10);
   if (!Number.isFinite(performanceMinutes) || performanceMinutes <= 0) {
     window.alert("演奏時間は1分以上の整数で入力してください。");
@@ -295,6 +410,7 @@ function editSlot(slotId) {
     String(slot.changeoverMinutes)
   );
   if (changeoverInput === null) return;
+
   const changeoverMinutes = Number.parseInt(changeoverInput, 10);
   if (!Number.isFinite(changeoverMinutes) || changeoverMinutes < 0) {
     window.alert("転換時間は0分以上の整数で入力してください。");
@@ -326,24 +442,77 @@ function createInitialState() {
   return initial;
 }
 
+function normalizeState(parsed) {
+  if (!parsed || !Array.isArray(parsed.events) || parsed.events.length === 0) {
+    return createInitialState();
+  }
+
+  const events = parsed.events
+    .map((event) => ({
+      id: String(event?.id || safeId()),
+      name: String(event?.name || "未命名のライブ"),
+      startTime: /^\d{2}:\d{2}$/.test(String(event?.startTime || ""))
+        ? String(event.startTime)
+        : "18:00",
+      slots: Array.isArray(event?.slots)
+        ? event.slots.map((slot) => ({
+            id: String(slot?.id || safeId()),
+            bandName: String(slot?.bandName || "未設定"),
+            performanceMinutes: normalizePositiveInt(slot?.performanceMinutes, 1),
+            changeoverMinutes: normalizeNonNegativeInt(slot?.changeoverMinutes, 0),
+          }))
+        : [],
+    }))
+    .filter((event) => event.id);
+
+  if (!events.length) {
+    return createInitialState();
+  }
+
+  const activeExists = events.some((event) => event.id === parsed.activeEventId);
+  return {
+    events,
+    activeEventId: activeExists ? parsed.activeEventId : events[0].id,
+  };
+}
+
+function normalizePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeNonNegativeInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 function getActiveEvent() {
   return state.events.find((event) => event.id === state.activeEventId) ?? null;
 }
 
-function loadState() {
+function loadState(roomId) {
   try {
-    const payload = window.localStorage.getItem(STORAGE_KEY);
+    const payload = window.localStorage.getItem(getStorageKey(roomId));
     if (!payload) return null;
-    const parsed = JSON.parse(payload);
-    if (!parsed || !Array.isArray(parsed.events)) return null;
-    return parsed;
+    return normalizeState(JSON.parse(payload));
   } catch {
     return null;
   }
 }
 
 function saveState() {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const normalized = normalizeState(state);
+  state = normalized;
+
+  const payload = JSON.stringify(normalized);
+  window.localStorage.setItem(getStorageKey(syncContext.roomId), payload);
+
+  if (syncContext.enabled && syncContext.stateRef) {
+    syncContext.stateRef.set(normalized).catch(() => {
+      setSyncStatus("クラウド保存に失敗しました");
+    });
+  }
+
   renderEventOptions();
 }
 
@@ -377,6 +546,7 @@ function exportActiveEventAsCsv() {
     window.alert("エクスポートするライブが見つかりません。");
     return;
   }
+
   if (!activeEvent.slots.length) {
     window.alert("演目がないためCSVを作成できません。");
     return;

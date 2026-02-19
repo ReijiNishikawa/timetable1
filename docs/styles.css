@@ -52,6 +52,24 @@ h1 {
   margin-top: 1rem;
 }
 
+.room-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+}
+
+.room-controls input[type="text"] {
+  min-width: 12rem;
+}
+
+.sync-status {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: #d1d5db;
+}
+
 label {
   font-weight: 600;
 }
